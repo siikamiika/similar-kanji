@@ -1,38 +1,7 @@
 #!/usr/bin/env python3
 
 import json
-from collections import OrderedDict
-
-class SimilarsFile(object):
-
-    def __init__(self, path, base=None):
-        self.path = path
-        if base:
-            self.kanji = OrderedDict(base)
-        else:
-            self._parse()
-
-    def _parse(self):
-        self.kanji = OrderedDict()
-        with open(self.path, 'r') as f:
-            lines = f.read().splitlines()
-        for l in lines:
-            l = [k for k in l.split('/') if k.strip()]
-            self.kanji[l[0]] = l[1:]
-
-    def write(self):
-        lines = ['{}/{}/'.format(c, '/'.join(self.kanji[c])) for c in self.kanji]
-        with open(self.path, 'w') as f:
-            f.write('\n'.join(lines) + '\n')
-
-    def get_similar(self, char):
-        return self.kanji.get(char) or []
-
-    def set_similar(self, char, similar):
-        if char not in self.kanji:
-            self.kanji[char] = []
-        if similar not in self.kanji[char]:
-            self.kanji[char].append(similar)
+from file.similars_file import SimilarsFile
 
 class LookalikeBlender(object):
 
@@ -68,10 +37,9 @@ class LookalikeBlender(object):
                         self.not_similar[lookalike].append(k)
                 else:
                     self.output.set_similar(k, lookalike)
-                    self.output.set_similar(lookalike, k)
         self.output.write()
         with open('not_similar', 'w') as f:
-            json.dump(self.not_similar, f, ensure_ascii=False)
+            json.dump(self.not_similar, f, indent=4, ensure_ascii=False)
 
 if __name__ == '__main__':
     blender = LookalikeBlender()
