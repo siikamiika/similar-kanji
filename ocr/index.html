@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="jpn">
+<head>
+    <meta charset="utf-8">
+    <title>ocr</title>
+</head>
+<body>
+    <table id="1"></table>
+    <table id="2"></table>
+    <table id="3"></table>
+    <table id="4"></table>
+    <textarea id="output"></textarea>
+    <script type="text/javascript">
+    var XHR = function(type, path, data, onready, async) {
+        if (!onready) {onready = function(){}}
+        if (!(async === false)) {async = true};
+        var xhr = new XMLHttpRequest();
+
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState == 4 && xhr.status == 200) {
+                onready(xhr.responseText);
+            }
+        }
+
+        xhr.open(type, path, async);
+        xhr.send(data);
+    }
+
+    for (var f = 1; f <= 4; f++) {
+        generateTable('' + f);
+    }
+
+    function generateTable (id) {
+        XHR('GET', 'ocr_'+id+'.png.json', null, function(data) {
+            var table = document.getElementById('' + id);
+            var similar = JSON.parse(data);
+            var tableContent = '';
+            for (var i in similar) {
+                if (similar.hasOwnProperty(i)) {
+                    tableContent += createTableRow(i, similar[i], id);
+                }
+            }
+            table.innerHTML = tableContent;
+        });
+    }
+
+    function createTableRow(i, data, id) {
+        var output = ['<tr>'];
+        output.push('<td>'+i+'.</td>');
+        for (var j = 0; j < data.length; j++) {
+            output.push('<td>');
+            output.push('<img height="50" src="data:image/png;base64, '+data[j][1]+'"/>');
+            output.push('<input onchange="updateOutput()" id="'+i+'|'+j+'|'+id+'" value="'+data[j][0]+'" style="font-size: 20px; width: 40px;">');
+            output.push('</td>');
+        }
+        output.push('</tr>');
+        return output.join('');
+    }
+
+    function updateOutput () {
+        var output = document.getElementById('output');
+        var outputData = {};
+        for (var f = 1; f <= 4; f++) {
+            outputData[f] = inputData(f);
+        }
+        output.value = JSON.stringify(outputData);
+    }
+
+    function inputData(f) {
+        var elements = document.querySelectorAll('[id$="|'+f+'"]');
+        var input = {};
+        for (var i = 0; i < elements.length; i++) {
+            elementData(elements[i], input);
+        }
+        return input;
+    }
+
+    function elementData(element, input) {
+        var indexes = element.id.split('|');
+        var group = Number(indexes[0]);
+        var index = Number(indexes[1]);
+        var value = element.value;
+        if (!input[group]) {
+            input[group] = [];
+        }
+        input[group][index] = value;
+    }
+    </script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*~
+radkfile
+kanjidic2.xml
+similar
+kanjidamage_similars.json
