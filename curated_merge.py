@@ -2,6 +2,7 @@
 
 import json
 from file.similars_file import SimilarsFile
+from file.not_similar_file import NotSimilar
 
 class LookalikeBlender(object):
 
@@ -9,11 +10,7 @@ class LookalikeBlender(object):
         self.original = SimilarsFile(original)
         self.similar = json.load(open(similar))
         self.output = SimilarsFile(output, self.original.kanji)
-        try:
-            with open('not_similar') as f:
-                self.not_similar = json.load(f)
-        except:
-            self.not_similar = dict()
+        self.not_similar = NotSimilar()
 
     def start(self):
         i = None
@@ -21,25 +18,17 @@ class LookalikeBlender(object):
             if i == 'a':
                 break
             for lookalike in self.similar[k]['similar']:
-                if lookalike == k or lookalike in self.output.get_similar(k) or k in (self.not_similar.get(lookalike) or []):
+                if lookalike == k or lookalike in self.output.get_similar(k) or k in self.not_similar.get(lookalike):
                     continue
                 i = input('Do {} and {} look similar? (Y(es)/n(o)/a(bort)):'.format(k, lookalike))
                 if i == 'a':
                     break
                 if i == 'n':
-                    if not self.not_similar.get(k):
-                        self.not_similar[k] = [lookalike]
-                    elif not lookalike in self.not_similar[k]:
-                        self.not_similar[k].append(lookalike)
-                    if not self.not_similar.get(lookalike):
-                        self.not_similar[lookalike] = [k]
-                    elif not k in self.not_similar[lookalike]:
-                        self.not_similar[lookalike].append(k)
+                    self.not_similar.add(k, lookalike)
                 else:
                     self.output.set_similar(k, lookalike)
         self.output.write()
-        with open('not_similar', 'w') as f:
-            json.dump(self.not_similar, f, indent=4, ensure_ascii=False)
+        self.not_similar.write()
 
 if __name__ == '__main__':
     blender = LookalikeBlender()
