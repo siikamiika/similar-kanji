@@ -5,6 +5,7 @@ import time
 import os
 import sys
 import json
+import argparse
 from os.path import dirname, realpath
 from file.kanjidic2 import Kanjidic2
 from file.radkfile import Radkfile
@@ -47,12 +48,19 @@ class SimilarFinder(object):
         if not (kanji1_parts and kanji2_parts):
             return False
 
+        if args.not_radicals and set(args.not_radicals) & (kanji1_parts | kanji2_parts):
+            return False
+
+        if args.only_radicals and not set(args.only_radicals) <= (kanji1_parts & kanji2_parts):
+            return False
+
         kanji1 = self.kanjidic_parsed[kanji1]
         kanji2 = self.kanjidic_parsed[kanji2]
 
         strokecount_diff = abs(kanji1['stroke_count'] - kanji2['stroke_count'])
 
-        return len(kanji1_parts ^ kanji2_parts) <= 2 and strokecount_diff <= 2
+        return (len(kanji1_parts ^ kanji2_parts) <= (args.radical_diff or 9001)
+            and strokecount_diff <= (args.strokecount_diff or 9001))
 
 def main():
     kanjidic2 = Kanjidic2()
@@ -61,4 +69,11 @@ def main():
     similar_finder.start()
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(
+        description='Find similar kanji with the help of Radkfile and Kanjidic2.')
+    parser.add_argument('--only-radicals', '-o', nargs='*')
+    parser.add_argument('--not-radicals', '-n', nargs='*')
+    parser.add_argument('--strokecount-diff', '-s', type=int, nargs='?')
+    parser.add_argument('--radical-diff', '-r', type=int, nargs='?')
+    args = parser.parse_args()
     main()
