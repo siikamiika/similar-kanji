@@ -14,7 +14,7 @@ class SimilarsFile(object):
 
     def _parse(self):
         self.kanji = OrderedDict()
-        with open(self.path, 'r') as f:
+        with open(self.path, 'r', encoding='utf-8') as f:
             lines = f.read().splitlines()
         for l in lines:
             l = [k for k in l.split('/') if k.strip()]
@@ -22,7 +22,7 @@ class SimilarsFile(object):
 
     def write(self):
         lines = ['{}/{}/'.format(c, '/'.join(self.kanji[c])) for c in self.kanji]
-        with open(self.path, 'w') as f:
+        with open(self.path, 'w', encoding='utf-8') as f:
             f.write('\n'.join(lines) + '\n')
 
     def get_similar(self, char):
