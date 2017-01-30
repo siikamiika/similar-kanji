@@ -47,6 +47,15 @@ class Kanjidic2(object):
             jlpt = int(jlpt.text)
         entry['jlpt'] = jlpt
 
+        query_code = character.find('query_code')
+
+        skip = None
+        if query_code is not None:
+            skip = query_code.find("q_code[@qc_type='skip']")
+        if skip is not None:
+            skip = tuple(map(int, skip.text.split('-')))
+        entry['skip'] = skip
+
         reading_meaning = character.find('reading_meaning')
         if not reading_meaning:
             return

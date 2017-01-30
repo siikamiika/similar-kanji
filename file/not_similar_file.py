@@ -12,8 +12,11 @@ class NotSimilar(object):
 
     def _parse(self):
         try:
-            with open(self.path) as f:
-                return json.load(f)
+            result = OrderedDict()
+            for line in open(self.path):
+                k, v = line.strip().split(':')
+                result[k] = v.split(',')
+            return result
         except:
             return OrderedDict()
 
@@ -22,7 +25,8 @@ class NotSimilar(object):
 
     def write(self):
         with open(self.path, 'w') as f:
-            json.dump(self.not_similar, f, indent=4, ensure_ascii=False)
+            f.write('\n'.join(['{}:{}'.format(
+                k, ','.join(self.not_similar[k])) for k in self.not_similar]))
 
 
     def add(self, a, b):
