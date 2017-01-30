@@ -29,6 +29,8 @@ class SimilarsFile(object):
         return self.kanji.get(char) or []
 
     def set_similar(self, char, similar):
+        if char == similar:
+            return
         if char not in self.kanji:
             self.kanji[char] = []
         if similar not in self.kanji[char]:
