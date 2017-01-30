@@ -83,9 +83,16 @@ class NotSimilarFinder(object):
 
         strokecount_diff = abs(kanji1['stroke_count'] - kanji2['stroke_count'])
 
-        return (len(kanji1_parts ^ kanji2_parts) >= (args.radical_diff or 0)
+        skip_match = True
+        if args.same_skip1:
+            skip_match = kanji1['skip'][0] != kanji2['skip'][0]
+        elif args.skip1_are:
+            skip_match = tuple(sorted([kanji1['skip'][0], kanji2['skip'][0]])) == tuple(sorted(args.skip1_are))
+
+        return (len(kanji1_parts ^ kanji2_parts) <= (args.radical_diff or 9001)
             and strokecount_diff >= (args.strokecount_diff or 0)
-            and kanji1['skip'][0] != kanji2['skip'][0] if args.same_skip else True)
+            and (kanji1['skip'][0] != kanji2['skip'][0] if args.same_skip1 else True)
+            and skip_match)
 
 def main():
     kanjidic2 = Kanjidic2()
@@ -100,7 +107,8 @@ if __name__ == '__main__':
     parser.add_argument('--not-radicals', '-n', nargs='*')
     parser.add_argument('--strokecount-diff', '-s', type=int, nargs='?')
     parser.add_argument('--radical-diff', '-r', type=int, nargs='?')
-    parser.add_argument('--same-skip', '-ss', action='store_true')
+    parser.add_argument('--same-skip1', '-ss1', action='store_true')
+    parser.add_argument('--skip1-are', '-s1', type=int, nargs='*')
     parser.add_argument('--similar-count-max', '-sc', type=int, nargs='?')
     parser.add_argument('--yes', action='store_true')
     parser.add_argument('--no', action='store_true')
