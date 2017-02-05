@@ -42,6 +42,8 @@ class SimilarFinder(object):
         print(len(queued))
 
         for kanji, similar in queued:
+            if similar not in self.similar.get_similar(kanji) or similar in self.not_similar_ignore.get(kanji):
+                continue
             print('{}: {}'.format(kanji, ', '.join(self.similar.get_similar(kanji))))
             if args.yes:
                 i = 'Y'
@@ -75,6 +77,8 @@ class SimilarFinder(object):
 
         i = None
         for kanji1, kanji2 in queued:
+            if kanji1 in self.similar.get_similar(kanji2) or kanji1 in self.not_similar.get(kanji2):
+                continue
             if i == 'a':
                 break
             i = input('Do {} and {} look similar? (Y(es)/n(o)/a(bort)):'.format(kanji1, kanji2))
