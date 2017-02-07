@@ -40,6 +40,9 @@ class SimilarFinder(object):
             not (q[0] not in self.similar.get_similar(q[1])
             or q[0] in self.not_similar_ignore.get(q[1])), queued))
         print(len(queued))
+        if args.print:
+            for q in queued:
+                print(''.join(q))
 
         for kanji, similar in queued:
             if similar not in self.similar.get_similar(kanji) or similar in self.not_similar_ignore.get(kanji):
@@ -74,6 +77,9 @@ class SimilarFinder(object):
             not (q[0] in self.similar.get_similar(q[1])
             or q[0] in self.not_similar.get(q[1])), queued))
         print(len(queued))
+        if args.print:
+            for q in queued:
+                print(''.join(q))
 
         i = None
         for kanji1, kanji2 in queued:
@@ -160,6 +166,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--add', action='store_true')
     parser.add_argument('--remove', action='store_true')
+    parser.add_argument('--print', action='store_true')
     parser.add_argument('--only-radicals', '-o', nargs='*')
     parser.add_argument('--some-radicals', '-sr', nargs='*')
     parser.add_argument('--not-radicals', '-n', nargs='*')
