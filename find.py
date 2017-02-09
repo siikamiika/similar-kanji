@@ -107,6 +107,18 @@ class SimilarFinder(object):
         return parsed
 
     def _match(self, kanji1, kanji2):
+
+        if args.kanji1_in:
+            if kanji2 in args.kanji1_in:
+                kanji1, kanji2 = kanji2, kanji1
+            elif kanji1 not in args.kanji1_in:
+                return False
+
+        if args.only_kanji:
+            for k in kanji1, kanji2:
+                if k not in args.only_kanji:
+                    return False
+
         kanji1_parts = self.radkfile.krad.get(kanji1)
         kanji2_parts = self.radkfile.krad.get(kanji2)
         if not (kanji1_parts and kanji2_parts):
@@ -175,6 +187,8 @@ if __name__ == '__main__':
     parser.add_argument('--same-skip1', '-ss1', action='store_true')
     parser.add_argument('--skip1-are', '-s1', type=int, nargs='*')
     parser.add_argument('--similar-count-max', '-sc', type=int, nargs='?')
+    parser.add_argument('--kanji1-in', '-k1', nargs='*')
+    parser.add_argument('--only-kanji', '-ok', nargs='*')
     parser.add_argument('--yes', action='store_true')
     parser.add_argument('--no', action='store_true')
     args = parser.parse_args()
