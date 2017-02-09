@@ -9,14 +9,17 @@ from file.kanjidic2 import Kanjidic2
 from file.radkfile import Radkfile
 from file.similars_file import SimilarsFile
 from file.not_similar_file import NotSimilar
+from file.kanjivg_parts import KanjiVGParts
+import json
 
 os.chdir(dirname(realpath(__file__)))
 
 class SimilarFinder(object):
 
-    def __init__(self, radkfile, kanjidic):
-        self.radkfile = radkfile
-        self.kanjidic = kanjidic
+    def __init__(self):
+        self.radkfile = Radkfile()
+        self.kanjidic = Kanjidic2()
+        self.kanjivg_parts = KanjiVGParts()
         self.similar = SimilarsFile('kanji.tgz_similars.ut8')
         self.not_similar = NotSimilar()
         self.kanjidic_parsed = self._kanjidic_parsed()
@@ -108,6 +111,7 @@ class SimilarFinder(object):
 
     def _match(self, kanji1, kanji2):
 
+        # general
         if args.kanji1_in:
             if kanji2 in args.kanji1_in:
                 kanji1, kanji2 = kanji2, kanji1
@@ -119,56 +123,151 @@ class SimilarFinder(object):
                 if k not in args.only_kanji:
                     return False
 
-        kanji1_parts = self.radkfile.krad.get(kanji1)
-        kanji2_parts = self.radkfile.krad.get(kanji2)
-        if not (kanji1_parts and kanji2_parts):
-            return False
+        # radkfile
+        kanji1_radicals = kanji2_radicals = None
+        if args.not_radicals or args.only_radicals or args.some_radicals or args.radical_diff is not None:
+            kanji1_radicals = self.radkfile.krad.get(kanji1)
+            kanji2_radicals = self.radkfile.krad.get(kanji2)
 
-        if args.not_radicals and set(args.not_radicals) & (kanji1_parts | kanji2_parts):
-            return False
-
-        if args.only_radicals and not set(args.only_radicals) <= (kanji1_parts & kanji2_parts):
-            return False
-
-        if args.some_radicals:
-            some = set(args.some_radicals)
-            if not (some & kanji1_parts and some & kanji2_parts):
+            if not (kanji1_radicals and kanji2_radicals):
                 return False
 
-        kanji1 = self.kanjidic_parsed[kanji1]
-        kanji2 = self.kanjidic_parsed[kanji2]
+            if args.not_radicals and set(args.not_radicals) & (kanji1_radicals | kanji2_radicals):
+                return False
+
+            if args.only_radicals and not set(args.only_radicals) <= (kanji1_radicals & kanji2_radicals):
+                return False
+
+            if args.some_radicals:
+                some = set(args.some_radicals)
+                if not (some & kanji1_radicals and some & kanji2_radicals):
+                    return False
 
         def _radical_diff():
             if args.radical_diff == None:
                 return True
-            rad_diff = len(kanji1_parts ^ kanji2_parts)
+            rad_diff = len(kanji1_radicals ^ kanji2_radicals)
             if args.radical_diff > 0:
                 return rad_diff >= args.radical_diff
             else:
                 return rad_diff <= -args.radical_diff
 
+        # kanjivg
+        kanji1_parts = kanji2_parts = similar_parts = None
+        if args.not_parts or args.only_parts or args.some_parts or args.part_diff is not None:
+            kanji1_parts = self.kanjivg_parts.get_parts(kanji1)
+            kanji2_parts = self.kanjivg_parts.get_parts(kanji2)
+
+            if not (kanji1_parts and kanji2_parts):
+                return False
+
+            if args.not_parts and set(args.not_parts) & (kanji1_parts | kanji2_parts):
+                return False
+
+            if args.only_parts and not set(args.only_parts) <= (kanji1_parts & kanji2_parts):
+                return False
+
+            if args.some_parts:
+                some = set(args.some_parts)
+                if not (some & kanji1_parts and some & kanji2_parts):
+                    return False
+
+            with open('similar_parts.json', encoding='utf-8') as f:
+                similar_parts_raw = json.load(f)
+
+            similar_parts = dict()
+            for p1, p2 in similar_parts_raw:
+                for p in p1, p2:
+                    if not similar_parts.get(p):
+                        similar_parts[p] = []
+                if not p2 in similar_parts[p1]:
+                    similar_parts[p1].append(p2)
+                if not p1 in similar_parts[p2]:
+                    similar_parts[p2].append(p1)
+
+        def _part_diff():
+            if args.part_diff == None:
+                return True
+
+            k1 = kanji1
+            k2 = kanji2
+            p1 = kanji1_parts
+            p2 = kanji2_parts
+
+            if k1 in p2:
+                p1 = set([k1])
+            elif k2 in p1:
+                p2 = set([k2])
+
+            if args.use_similar_parts:
+                part_diff = 0
+
+                def get_skip(entry):
+                    entry = self.kanjidic_parsed.get(entry)
+                    if entry and entry.get('skip'):
+                        return entry['skip'][0]
+                    else:
+                        return -1
+
+                p2, p1 = sorted([p1, p2], key=len)
+                for _p1 in p1:
+                    similar_part = False
+                    _p1_skip1 = get_skip(_p1)
+                    _p1_deep = set([_p1] + list(filter(lambda k: get_skip(k) == _p1_skip1, self.similar.get_similar(_p1))))
+                    if similar_parts.get(_p1):
+                        _p1_deep |= set(similar_parts[_p1])
+                    for _p2 in p2:
+                        _p2_skip1 = get_skip(_p2)
+                        _p2_deep = set([_p2] + list(filter(lambda k: get_skip(k) == _p2_skip1, self.similar.get_similar(_p2))))
+                        if similar_parts.get(_p2):
+                            _p2_deep |= set(similar_parts[_p2])
+                        if args.use_similar_parts_deep:
+                            if _p1_deep & _p2_deep:
+                                similar_part = True
+                                break
+                        else:
+                            if _p1 in _p2_deep or _p2 in _p1_deep:
+                                similar_part = True
+                                break
+                    if not similar_part:
+                        part_diff += 1
+            else:
+                part_diff = len(kanji1_parts ^ kanji2_parts)
+            if args.part_diff > 0:
+                return part_diff >= args.part_diff
+            else:
+                return part_diff <= -args.part_diff
+
+        # kanjidic2
+        kanjidic_kanji1 = self.kanjidic_parsed[kanji1]
+        kanjidic_kanji2 = self.kanjidic_parsed[kanji2]
+
         def _strokecount_diff():
             if args.strokecount_diff == None:
                 return True
-            sc_diff = abs(kanji1['stroke_count'] - kanji2['stroke_count'])
+            sc_diff = abs(kanjidic_kanji1['stroke_count'] - kanjidic_kanji2['stroke_count'])
             if args.strokecount_diff > 0:
                 return sc_diff >= args.strokecount_diff
             else:
                 return sc_diff <= -args.strokecount_diff
+
         def _skip():
             skip_match = True
+            skip_1 = kanjidic_kanji1['skip'][0] if kanjidic_kanji1.get('skip') else -1
+            skip_2 = kanjidic_kanji2['skip'][0] if kanjidic_kanji2.get('skip') else -1
             if args.same_skip1:
-                skip_match = kanji1['skip'][0] != kanji2['skip'][0]
+                skip_match = skip_1 != skip_2
             elif args.skip1_are:
-                skip_match = tuple(sorted([kanji1['skip'][0], kanji2['skip'][0]])) == tuple(sorted(args.skip1_are))
+                skip_match = tuple(sorted([skip_1, skip_2])) == tuple(sorted(args.skip1_are))
             return skip_match
 
-        return _radical_diff() and _strokecount_diff() and _skip()
+        return (_skip()
+                and _radical_diff()
+                and _part_diff()
+                and _strokecount_diff())
 
 def main():
-    kanjidic2 = Kanjidic2()
-    radkfile = Radkfile()
-    similar_finder = SimilarFinder(radkfile, kanjidic2)
+    similar_finder = SimilarFinder()
     if args.add:
         similar_finder.find_similar()
     elif args.remove:
@@ -176,19 +275,32 @@ def main():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    # mode
     parser.add_argument('--add', action='store_true')
     parser.add_argument('--remove', action='store_true')
+    # print
     parser.add_argument('--print', action='store_true')
+    # radkfile
     parser.add_argument('--only-radicals', '-o', nargs='*')
     parser.add_argument('--some-radicals', '-sr', nargs='*')
     parser.add_argument('--not-radicals', '-n', nargs='*')
-    parser.add_argument('--strokecount-diff', '-s', type=int, nargs='?')
     parser.add_argument('--radical-diff', '-r', type=int, nargs='?')
+    # kanjidic2
+    parser.add_argument('--strokecount-diff', '-s', type=int, nargs='?')
     parser.add_argument('--same-skip1', '-ss1', action='store_true')
     parser.add_argument('--skip1-are', '-s1', type=int, nargs='*')
+    # kanjivg
+    parser.add_argument('--only-parts', '-op', nargs='*')
+    parser.add_argument('--some-parts', '-sp', nargs='*')
+    parser.add_argument('--not-parts', '-np', nargs='*')
+    parser.add_argument('--part-diff', '-p', type=int, nargs='?')
+    parser.add_argument('--use-similar-parts', '-usp', action='store_true')
+    parser.add_argument('--use-similar-parts-deep', '-uspd', action='store_true')
+    # general
     parser.add_argument('--similar-count-max', '-sc', type=int, nargs='?')
     parser.add_argument('--kanji1-in', '-k1', nargs='*')
     parser.add_argument('--only-kanji', '-ok', nargs='*')
+    # no user interaction
     parser.add_argument('--yes', action='store_true')
     parser.add_argument('--no', action='store_true')
     args = parser.parse_args()
