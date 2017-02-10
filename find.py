@@ -23,6 +23,17 @@ class SimilarFinder(object):
         self.similar = SimilarsFile('kanji.tgz_similars.ut8')
         self.not_similar = NotSimilar()
         self.kanjidic_parsed = self._kanjidic_parsed()
+        with open('similar_parts.json', encoding='utf-8') as f:
+            similar_parts_raw = json.load(f)
+        self.similar_parts = dict()
+        for p1, p2 in similar_parts_raw:
+            for p in p1, p2:
+                if not self.similar_parts.get(p):
+                    self.similar_parts[p] = []
+            if not p2 in self.similar_parts[p1]:
+                self.similar_parts[p1].append(p2)
+            if not p1 in self.similar_parts[p2]:
+                self.similar_parts[p2].append(p1)
 
     def find_not_similar(self):
         self.not_similar_ignore = NotSimilar('not_similar_ignore')
@@ -153,7 +164,7 @@ class SimilarFinder(object):
                 return rad_diff <= -args.radical_diff
 
         # kanjivg
-        kanji1_parts = kanji2_parts = similar_parts = None
+        kanji1_parts = kanji2_parts = None
         if args.not_parts or args.only_parts or args.some_parts or args.part_diff is not None:
             kanji1_parts = self.kanjivg_parts.get_parts(kanji1)
             kanji2_parts = self.kanjivg_parts.get_parts(kanji2)
@@ -171,19 +182,6 @@ class SimilarFinder(object):
                 some = set(args.some_parts)
                 if not (some & kanji1_parts and some & kanji2_parts):
                     return False
-
-            with open('similar_parts.json', encoding='utf-8') as f:
-                similar_parts_raw = json.load(f)
-
-            similar_parts = dict()
-            for p1, p2 in similar_parts_raw:
-                for p in p1, p2:
-                    if not similar_parts.get(p):
-                        similar_parts[p] = []
-                if not p2 in similar_parts[p1]:
-                    similar_parts[p1].append(p2)
-                if not p1 in similar_parts[p2]:
-                    similar_parts[p2].append(p1)
 
         def _part_diff():
             if args.part_diff == None:
@@ -214,13 +212,13 @@ class SimilarFinder(object):
                     similar_part = False
                     _p1_skip1 = get_skip(_p1)
                     _p1_deep = set([_p1] + list(filter(lambda k: get_skip(k) == _p1_skip1, self.similar.get_similar(_p1))))
-                    if similar_parts.get(_p1):
-                        _p1_deep |= set(similar_parts[_p1])
+                    if self.similar_parts.get(_p1):
+                        _p1_deep |= set(self.similar_parts[_p1])
                     for _p2 in p2:
                         _p2_skip1 = get_skip(_p2)
                         _p2_deep = set([_p2] + list(filter(lambda k: get_skip(k) == _p2_skip1, self.similar.get_similar(_p2))))
-                        if similar_parts.get(_p2):
-                            _p2_deep |= set(similar_parts[_p2])
+                        if self.similar_parts.get(_p2):
+                            _p2_deep |= set(self.similar_parts[_p2])
                         if args.use_similar_parts_deep:
                             if _p1_deep & _p2_deep:
                                 similar_part = True
