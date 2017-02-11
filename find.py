@@ -116,7 +116,7 @@ class SimilarFinder(object):
         parsed = dict()
         for k in self.kanjidic.dic:
             kanji = self.kanjidic.get(k)
-            if kanji and (kanji['grade'] or kanji['freq']):
+            if kanji and ((kanji['grade'] and kanji['grade'] < 10) or kanji['freq']):
                 parsed[k] = kanji
         return parsed
 
