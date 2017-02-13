@@ -53,10 +53,10 @@ class SimilarFinder(object):
         queued = list(filter(lambda q:
             not (q[0] not in self.similar.get_similar(q[1])
             or q[0] in self.not_similar_ignore.get(q[1])), queued))
-        print(len(queued))
         if args.print:
             for q in queued:
                 print(''.join(q))
+        print(len(queued))
 
         for kanji, similar in queued:
             if similar not in self.similar.get_similar(kanji) or similar in self.not_similar_ignore.get(kanji):
@@ -90,10 +90,10 @@ class SimilarFinder(object):
         queued = list(filter(lambda q:
             not (q[0] in self.similar.get_similar(q[1])
             or q[0] in self.not_similar.get(q[1])), queued))
-        print(len(queued))
         if args.print:
             for q in queued:
                 print(''.join(q))
+        print(len(queued))
 
         i = None
         for kanji1, kanji2 in queued:
