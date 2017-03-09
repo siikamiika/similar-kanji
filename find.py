@@ -47,20 +47,17 @@ class SimilarFinder(object):
             for similar in self.similar.get_similar(kanji):
                 if similar not in self.kanjidic_parsed:
                     continue
+                if not args.skip_not_similar and kanji in self.not_similar_ignore.get(similar):
+                    continue
                 if add_all or self._match(kanji, similar):
                     queued.append((kanji, similar))
 
-        queued = list(filter(lambda q:
-            not (q[0] not in self.similar.get_similar(q[1])
-            or q[0] in self.not_similar_ignore.get(q[1])), queued))
         if args.print:
             for q in queued:
                 print(''.join(q))
         print(len(queued))
 
         for kanji, similar in queued:
-            if similar not in self.similar.get_similar(kanji) or similar in self.not_similar_ignore.get(kanji):
-                continue
             print('{}: {}'.format(kanji, ', '.join(self.similar.get_similar(kanji))))
             if args.yes:
                 i = 'Y'
@@ -84,12 +81,13 @@ class SimilarFinder(object):
     def find_similar(self):
         queued = []
         for kanji1, kanji2 in combinations(self.kanjidic_parsed, 2):
+            if kanji1 in self.similar.get_similar(kanji2):
+                continue
+            if not args.skip_not_similar and kanji1 in self.not_similar.get(kanji2):
+                continue
             if self._match(kanji1, kanji2):
                 queued.append((kanji1, kanji2))
 
-        queued = list(filter(lambda q:
-            not (q[0] in self.similar.get_similar(q[1])
-            or q[0] in self.not_similar.get(q[1])), queued))
         if args.print:
             for q in queued:
                 print(''.join(q))
@@ -97,8 +95,6 @@ class SimilarFinder(object):
 
         i = None
         for kanji1, kanji2 in queued:
-            if kanji1 in self.similar.get_similar(kanji2) or kanji1 in self.not_similar.get(kanji2):
-                continue
             if i == 'a':
                 break
             i = input('Do {} and {} look similar? (Y(es)/n(o)/a(bort)):'.format(kanji1, kanji2))
@@ -298,6 +294,7 @@ if __name__ == '__main__':
     parser.add_argument('--similar-count-max', '-sc', type=int, nargs='?')
     parser.add_argument('--kanji1-in', '-k1', nargs='*')
     parser.add_argument('--only-kanji', '-ok', nargs='*')
+    parser.add_argument('--skip-not-similar', '-sns', action='store_true')
     # no user interaction
     parser.add_argument('--yes', action='store_true')
     parser.add_argument('--no', action='store_true')
